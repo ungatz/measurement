@@ -1,0 +1,224 @@
+\documentclass[12pt]{article}
+
+% --- Packages ---
+\usepackage[utf8]{inputenc}    % Encoding
+\usepackage{amsmath, amssymb, stmaryrd, mathtools}  % Math symbols
+\usepackage{graphicx}          % For figures
+\usepackage{hyperref}          % Clickable links
+\usepackage{geometry}          % Page layout
+\usepackage{braket}            % Dirac speak
+\usepackage{cancel}
+\geometry{margin=1in}
+
+\usepackage[dvipsnames]{xcolor} % gives lots of named colors
+\newcommand{\gr}[1]{\textcolor{ForestGreen}{#1}}
+\newcommand{\rd}[1]{\textcolor{Maroon}{#1}}
+
+% Fonts
+\usepackage{libertine}
+\usepackage{libertinust1math}
+\usepackage[T1]{fontenc}
+
+\newcommand{\kw}[1]{\mathsf{#1}}
+
+% --- Title Information ---
+\title{Adding measurement to ISO}
+% \author{Your Name \\ \small Your Institution}
+% \date{\today}
+
+\begin{document}
+
+\maketitle
+
+% \begin{abstract}
+% Write a brief summary of your paper here. Keep it concise and informative.
+% \end{abstract}
+
+% \section{Introduction}
+% Introduce the topic, provide background, and state the purpose of your paper.
+
+\section{Related Work}
+There are two most relevant papers that attempt to solve the same problems:
+\begin{itemize}
+  \item combine classical and quantum data in a syntactically ergonomic way;
+  \item allow impure operations by allowing measurements;
+  \item should be able to express quantum channels like bit-flip etc.
+\end{itemize}
+
+\textbf{1. Qunity, Voichick et. al.}
+\vspace{0.75em}
+
+\textit{Main Idea:} Allow not only unitaries but isometries and superoperators as trace preserving and trace
+non-increasing maps respectively. Pure expressions in Qunity have the same typing rules as the reversible classical
+language $\Pi$.
+
+The new thing is the ability to express mixed states where the classical and quantum data are expressed
+in a unified way using the $\textsf{try-catch}$ block.
+
+Pure types are considered subtypes of mixed types.
+
+\[
+\frac{\Delta_0 \vdash e_0 : T \quad \Delta_1 \vdash e_1 : T}{\Delta_0, \Delta_1 \vdash \textsf{try}\, e_0\, \textsf{catch}\, e_1 : T}
+\quad \text{T-Try}
+\]
+
+\[
+\begin{aligned}
+\llbracket \Delta_0, \Delta_1 \vdash \mathrm{try}\ e_0\ \mathrm{catch}\ e_1 : T \rrbracket
+&\bigl( \ket{\tau_0,\tau_1}  \ket{\tau'_0,\tau'_1} \bigr) \notag \\
+&:= \llbracket \Delta_0 \vdash e_0 : T \rrbracket
+\bigl( \ket{\tau_0}  \ket{\tau'_0} \bigr) \notag \\
+&\quad + \Bigl( 1 - tr\!\bigl( \llbracket \Delta_0 \vdash e_0 : T \rrbracket
+  ( \ket{\tau_0}  \ket{\tau'_0} ) \bigr) \Bigr) \cdot
+\llbracket \Delta_1 \vdash e_1 : T \rrbracket
+\bigl( \ket{\tau_1}  \ket{\tau'_1} \bigr)
+\end{aligned}
+\]
+
+Measurement is implemented in an ad-hoc way as the following function $\textsf{Bit} \Rightarrow \textsf{Bit}$ using the
+concept that ``partial trace (or discarding) is equivalent to measuring and discarding''
+
+The function first copies the input (sharing via entanglement) and throws away the copy
+where copying only copies the basis element thus implementing the isometry $\ket{00}\bra{0} + \ket{11}\bra{1}$ and \textsf{fst} works as partial trace.
+
+\[
+\text{meas}_{T} := \lambda x \mapsto (x, x) \triangleright \text{fst}_{Bit \otimes Bit}
+\]
+
+An example usage of this measurement:
+\[
+\text{coin} := \text{meas}_{Bit} (\text{had } 0) = () \triangleright \text{left}_{Bit} \triangleright \text{had}
+   \triangleright (\lambda x  (x, x) )
+   \triangleright (\lambda (x_0, x_1)  x_0 )
+   ^ {T  \otimes T}
+\]
+
+\textit{Remarks:}
+\begin{itemize}
+  \item Instead of operational semantics they provide a compilation procedure to low level circuits in \textsf{QASM}.
+        \item They mention that patterns in match constructs can be non-exaustive but this does not follow from their
+        typing rules.
+\end{itemize}
+
+\textbf{2. Combining quantum and classical control, Dave el. al.}
+\vspace{0.75em}
+
+\textit{Main Idea:}
+\begin{itemize}
+  \item a new modality to incorporate pure quantum types in a mixed quantum typesystem;
+  \item modify ``quantum configurations'' of quantum lambda calculus to give operational semantics to mixed
+        quantum computations;
+  \item denotational semantics motivated by von Neumann algebras.
+\end{itemize}
+
+Term grammar for the pure quantum subsystem is that of ISO.
+
+Instead of an operational semantics they give an equational theory for pure subsystem.
+
+The classical subsystem is basically a call by value linear lambda calculus which can work with types from quantum
+fragment (the bold font).
+
+$\mathcal{B}(\textbf{Q})$ is the type that represents mixed state quantum computation on the Hilbert space determined by
+the type \textbf{Q}. This $\mathcal{B}$ is the new modality where $\mathcal{B}(H)$ represents the space of bounded
+operators on $H$ which is a vN algebra.
+
+The rule for the term \textsf{pure}(t) introduces a state t from the quantum control fragment as a term of type $\mathcal{B}(\textbf{Q})$ into the main calculus. The typing rule for measurement maps a term M of quantum type $\mathcal{B}(\textbf{Q})$ to a term \textsf{meas}(M) of classical type $\bar{\textbf{Q}}$, where the type $\bar{\textbf{Q}}$ is defined inductively on the structure of the pure quantum type $\textbf{Q}$.
+
+\[
+  \frac{\Delta \vdash M : \mathcal{B}(\textbf{Q})}{\Delta \vdash \mathrm{meas}(M) : \overline{\textbf{Q}}}
+  \hspace{2em}
+\frac{\cdot \vdash \textbf{t} : \textbf{Q}}{!\Delta \vdash \mathrm{pure}(\textbf{t}) : \mathcal{B}(\textbf{Q})}
+\]
+
+Operationally,
+\[
+\begin{aligned}
+(t, u_{\sigma}, \mathrm{pure}(t')) &\;\xrightarrow{1}\;
+\bigl(t \otimes t',\, u_{\sigma \mathrm{swap}} \circ (u_{\sigma} \otimes u_{\mathrm{id}}),\, x\bigr) \\[1em]
+(\Sigma_i p_i \cdot \Sigma_j \boldsymbol{\alpha}_{ij} \cdot \boldsymbol{b}'_{ij} \otimes \cdots \otimes \boldsymbol{b}_i \otimes \cdots,\,
+u_{\sigma_s},\, \mathrm{meas}(x))
+&\;\xrightarrow{|\!p_k\!|^2}\;
+\bigl(\Sigma_j \boldsymbol{\alpha}_{kj} \cdot \boldsymbol{b}'_{kj} \otimes \cdots,\,
+u_{\mathrm{id}},\, \overline{\boldsymbol{b}}_k \bigr)
+\end{aligned}
+\]
+
+\textit{Remarks:}
+\begin{itemize}
+        \item The use of von Neumann algebra in denotational semantics is interesting since it relates more closesly to
+        physical realizations.
+  \item writing programs is not so straightforward (might be biased on this).
+\end{itemize}
+
+\section{Ideas}
+
+\[
+  \begin{array}{@{}l@{\qquad}l@{}}
+    \text{Val \& term types} &
+                               a,b ::= 1 \mid a \oplus b \mid a \otimes b \mid [a] \\[0.8ex]
+    \text{Iso types} &
+                       T ::= a \leftrightarrow b \mid \bcancel{(a \leftrightarrow b) \to T} \mid \gr{a \Rightarrow b} \\[1.2ex]
+    \text{Pure values} &
+                         v ::= () \mid x \mid \kw{inj}_{\ell}\, v \mid \kw{inj}_{r}\, v \mid \langle v_1, v_2\rangle \\[0.8ex]
+    \text{Combination of values} &
+                                   e ::= v \mid e_1 + e_2 \mid \alpha\, e \\[0.8ex]
+    \text{Products} &
+                      p ::= () \mid x \mid \langle p_1, p_2\rangle \\[0.8ex]
+    \text{Extended Values} &
+                             e ::= v \mid \kw{let}\; p_1 = \omega\; p_2\; \kw{in}\; e \\[0.8ex]
+    \text{Isos} &
+                  \omega ::= \{\, \mid\, v_1 \leftrightarrow e_1 \mid v_2 \leftrightarrow e_2 \ \ldots \,\}
+                  \mid \lambda f.\,\omega \mid \bcancel{\mu f.\,\omega} \mid f \mid \omega_1\,\omega_2 \\[0.8ex]
+    \gr{\text{CPMs}} &
+                       \Lambda ::= \{\, \mid\, v_1 \leftrightarrow e_1 \mid v_2 \leftrightarrow e_2 \ \ldots \,\}
+                       \mid \lambda f. \Lambda \mid f \mid \text{does } \Lambda_{1}\Lambda_{2} \text{ make sense here? }\\[0.8ex]
+    \text{Terms} &
+                   t ::= () \mid x \mid \kw{inj}_{\ell}\, t \mid \kw{inj}_{r}\, t \mid \langle t_1, t_2\rangle \mid
+                   \omega\, t \mid \kw{let}\; p = t_1\; \kw{in}\; t_2 \mid t_1 + t_2 \mid \alpha \cdot t \mid \\  & \ \ \ \ \ \ \ \ \ \gr{\kw{meas}(t)} \mid \gr{\kw{alloc}(\rd{?})} \mid \gr{\Lambda t}
+  \end{array}
+\]
+
+\textsf{meas(t)} when $t$ is pair?
+
+
+
+Typing for an iso in this quantum extention originally is given as:
+
+\[
+\frac{%
+\begin{array}{l@{\qquad\qquad}l}
+\Delta_{1};\,\Psi \vdash_{v} v_{1} : a & \cdots \quad \Delta_{n};\,\Psi \vdash_{v} v_{n} : a \\[0.3ex]
+\Delta_{1};\,\Psi \vdash_{v} e_{1} : b & \cdots \quad \Delta_{n};\,\Psi \vdash_{v} e_{n} : b \\[0.6ex]
+\kw{OD}_{a}\{v_{1},\ldots,v_{n}\} & \kw{OD}_{b}^{\mathrm{ext}}\{e_{1},\ldots,e_{n}\} \\[1ex]
+\multicolumn{2}{c}{%
+\left(
+\begin{array}{ccc}
+a_{11} & \cdots & a_{1n} \\
+\vdots & \ddots & \vdots \\
+a_{n1} & \cdots & \bcancel{a_{nn}}\ \gr{a_{nm}}
+\end{array}
+\right)\ \text{is } \bcancel{\text{unitary}} \text{ isometry}%
+}
+\end{array}
+}{%
+\Psi \vdash_{\omega}
+\left\{
+\begin{array}{l}
+v_{1} \leftrightarrow a_{11}\cdot e_{1} + \cdots + a_{1n}\cdot e_{n} \\
+\vdots \\
+v_{n} \leftrightarrow a_{n1}\cdot e_{1} + \cdots + a_{nn}\cdot e_{n}
+\end{array}
+\right\}
+:\ \bcancel{a \leftrightarrow b}\ \gr{a \Rightarrow b}
+}
+\]
+\end{document}
+
+
+
+% \section{Conclusion}
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}

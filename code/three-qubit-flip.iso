@@ -1,0 +1,28 @@
+p1 : B ⊗ B ⊗ B <-> B ⊗ B ⊗ B
+{⟨b1, b2, b3⟩ ↦ let ⟨b1, b1'⟩ = cx⟨b1, b2⟩ in
+                let ⟨b2, b2'⟩ = cx⟨b1, b3⟩ in
+                ⟨b1', b2', b3⟩ }
+
+p2 : B^5 <-> B^5
+{⟨b1, b2, b3, b4, b5⟩ ↦ let ⟨b1, b1'⟩ = cx⟨b1, b4⟩ in
+                        let ⟨b2, b2'⟩ = cx⟨b2, b4⟩ in
+                        let ⟨b1, b5'⟩ = cx⟨b1, b5⟩ in
+                        let ⟨b3, b5'⟩ = cx⟨b3, b5'⟩ in
+                        ⟨b1, b1', b3, b3', b4', b5'⟩ }
+
+correct : I^⊗2 ⊗ B^⊗3 ⟹ B^⊗3
+{ ⟨0,0,b1,b2,b3⟩ ⟹ ⟨b1,b2,b3⟩
+  ⟨0,1,b1,b2,b3⟩ ⟹ ⟨b1,b2, X b3⟩
+  ⟨1,0,b1,b2,b3⟩ ⟹ ⟨X b1,b2,b3⟩
+  ⟨1,1,b1,b2,b3⟩ ⟹ ⟨b1, X b2, X b3⟩ }
+
+
+let init = H (left unit) in
+    let ⟨b1, b2, b3⟩ = p1⟨init, left unit, left unit⟩ in
+     let ⟨b1', b2', b3', b4, b5⟩ = p2⟨b1, b2, b3, left unit, left unit⟩ in
+      let m1 = measure b4 in
+       let m2 = measure b5 in
+        correct(m1, m2, b1', b2', b3')
+
+-- operational semantics
+-- add effect on layer
